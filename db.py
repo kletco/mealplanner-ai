@@ -142,16 +142,20 @@ def get_global_substitutions():
     return [r["substitution"] for r in rows]
 
 
-def update_recipe(recipe_id, fields: dict):
+def update_recipe(recipe_id, fields: dict) -> bool:
+    """Update fields on a recipe. Returns True if a row was matched, False if not found."""
     if not fields:
-        return
+        return True
     conn = get_conn()
+    matched = 0
     for key, val in fields.items():
         if isinstance(val, (list, dict)):
             val = json.dumps(val)
-        conn.execute(f"UPDATE recipes SET {key} = ? WHERE id = ?", (val, recipe_id))
+        cur = conn.execute(f"UPDATE recipes SET {key} = ? WHERE id = ?", (val, recipe_id))
+        matched = max(matched, cur.rowcount)
     conn.commit()
     conn.close()
+    return matched > 0
 
 
 def save_meal_plan(week_of, recipe_ids, category_set_id="weeknight_dinners", notes=""):

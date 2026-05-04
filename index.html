@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recipe Book</title>
+<style>
+:root {
+  --accent: #0d9488;
+  --accent-dark: #0f766e;
+  --star-on: #f59e0b;
+  --star-off: #d1d5db;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --bg: #f8fafc;
+  --row-hover: #f0fdfa;
+  --shadow: 0 1px 6px rgba(0,0,0,.08);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+/* ── Header ── */
+header {
+  background: var(--accent);
+  color: white;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,.18);
+}
+header h1 { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+header .sub { opacity: .7; font-size: 12px; margin-top: 1px; }
+.pill {
+  margin-left: auto;
+  background: rgba(255,255,255,.18);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+#btn-refresh {
+  background: rgba(255,255,255,.15);
+  border: 1px solid rgba(255,255,255,.3);
+  color: white;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+  transition: background .15s, transform .2s;
+}
+#btn-refresh:hover { background: rgba(255,255,255,.25); }
+#btn-refresh.spinning { transform: rotate(360deg); transition: transform .5s linear; }
+
+/* ── Filter bar ── */
+.filters {
+  background: white;
+  border-bottom: 1px solid var(--border);
+  padding: 8px 16px;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  align-items: center;
+  position: sticky;
+  top: 49px;
+  z-index: 99;
+  box-shadow: 0 2px 4px rgba(0,0,0,.04);
+}
+.filters input[type=text] {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 12px;
+  width: 155px;
+  min-width: 0;
+  background: #f9fafb;
+  outline: none;
+  transition: border-color .15s, background .15s;
+}
+.filters input[type=text]:focus { border-color: var(--accent); background: white; }
+.filters select {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 4px;
+  font-size: 12px;
+  background: #f9fafb;
+  color: var(--text);
+  cursor: pointer;
+  outline: none;
+  transition: border-color .15s;
+  min-width: 0;
+  width: 90px;
+}
+.filters select:focus { border-color: var(--accent); background: white; }
+.btn-clear {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: white;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background .12s;
+  white-space: nowrap;
+}
+.btn-clear:hover { background: #f3f4f6; color: var(--text); }
+
+/* ── Table ── */
+.table-wrap { padding: 14px 16px 32px; overflow-x: auto; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+thead th {
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 9px 6px;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+  user-select: none;
+  cursor: pointer;
+  transition: color .12s;
+}
+thead th:hover { color: var(--accent); }
+thead th .si { opacity: .35; margin-left: 2px; font-style: normal; }
+thead th.sorted { color: var(--accent-dark); }
+thead th.sorted .si { opacity: 1; }
+td {
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--row-hover); }
+
+/* ── Badges ── */
+.badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+.b-ce  { background: #dcfce7; color: #15803d; }
+.b-c   { background: #dbeafe; color: #1d4ed8; }
+.b-sk  { background: #fef3c7; color: #b45309; }
+.b-p   { background: #f3e8ff; color: #7e22ce; }
+.b-m   { background: #f1f5f9; color: #475569; }
+
+/* ── Stars ── */
+.stars {
+  display: inline-flex;
+  gap: 0px;
+  line-height: 1;
+}
+.star {
+  font-size: 13px;
+  color: var(--star-off);
+  cursor: pointer;
+  transition: transform .08s;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.star.on  { color: var(--star-on); }
+.star:hover { transform: scale(1.25); }
+/* CSS hover fill-up: all stars glow on container hover */
+.stars:hover .star            { color: var(--star-on); }
+/* Stars after the hovered star revert to empty */
+.stars .star:hover ~ .star    { color: var(--star-off); }
+/* Saving state */
+.stars.saving .star { opacity: .35; pointer-events: none; }
+
+/* ── Score ── */
+.score { font-weight: 700; font-size: 13px; }
+.sc-hi { color: #16a34a; }
+.sc-md { color: #d97706; }
+.sc-lo { color: #dc2626; }
+.sc-na { color: #d1d5db; font-weight: 400; }
+
+/* ── Misc ── */
+.never { color: #d1d5db; font-style: italic; }
+.center { text-align: center; }
+.mono { font-variant-numeric: tabular-nums; }
+
+/* ── Editable last-made cell ── */
+.lm-cell {
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 12px;
+  position: relative;
+}
+.lm-cell:hover .lm-val { text-decoration: underline dotted var(--muted); }
+.lm-cell:hover::after {
+  content: ' ✎';
+  font-size: 10px;
+  color: var(--muted);
+  opacity: .6;
+}
+.lm-cell input[type=date] {
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--text);
+  background: white;
+  outline: none;
+  width: 110px;
+  cursor: pointer;
+}
+
+/* ── Empty / Loading ── */
+.state-msg {
+  text-align: center;
+  padding: 56px 24px;
+  color: var(--muted);
+  background: white;
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+.state-msg .icon { font-size: 32px; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Recipe Book</h1>
+    <div class="sub">Kim · Todd · Owen</div>
+  </div>
+  <div class="pill" id="pill">Loading…</div>
+  <button id="btn-refresh" title="Refresh from database">↺</button>
+</header>
+
+<div class="filters">
+  <input type="text" id="f-name" placeholder="Search by name…" autocomplete="off">
+  <select id="f-style"><option value="">Style</option></select>
+  <select id="f-protein"><option value="">Protein</option></select>
+  <select id="f-method"><option value="">Method</option></select>
+  <select id="f-tag"><option value="">Tag</option></select>
+  <button class="btn-clear" id="btn-clear">Clear</button>
+</div>
+
+<div class="table-wrap">
+  <div class="state-msg" id="msg"><div class="icon">⏳</div>Loading recipes…</div>
+  <table id="tbl" style="display:none">
+    <thead>
+      <tr>
+        <th data-col="name">Name <i class="si">↕</i></th>
+        <th data-col="style">Style <i class="si">↕</i></th>
+        <th data-col="protein">Protein</th>
+        <th data-col="cook_method">Method</th>
+        <th data-col="rating_kim" class="center">Kim <i class="si">↕</i></th>
+        <th data-col="rating_todd" class="center">Todd <i class="si">↕</i></th>
+        <th data-col="rating_owen" class="center">Owen <i class="si">↕</i></th>
+        <th data-col="last_made" class="center">Last Made <i class="si">↕</i></th>
+        <th data-col="times_made" class="center"># <i class="si">↕</i></th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<script>
+'use strict';
+
+let allRecipes = [];
+let sortCol = 'name';
+let sortDir = 1;
+
+/* ── Data helpers ── */
+function score(r) {
+  const k = r.rating_kim, t = r.rating_todd, o = r.rating_owen;
+  if (k == null && t == null && o == null) return null;
+  let n = 0, d = 0;
+  if (k != null) { n += k * 1.5; d += 1.5; }
+  if (t != null) { n += t;       d += 1.0; }
+  if (o != null) { n += o;       d += 1.0; }
+  return n / d;
+}
+
+/* ── Load ── */
+async function load() {
+  const res = await fetch('/api/recipes');
+  allRecipes = await res.json();
+  buildSelects();
+  render();
+  document.getElementById('msg').style.display = 'none';
+  document.getElementById('tbl').style.display = 'table';
+}
+
+/* ── Build filter dropdowns from live data ── */
+function buildSelects() {
+  const sets = { 'f-style': new Set(), 'f-protein': new Set(),
+                 'f-method': new Set(), 'f-tag': new Set() };
+  allRecipes.forEach(r => {
+    if (r.style) sets['f-style'].add(r.style);
+    (r.protein    || []).forEach(v => sets['f-protein'].add(v));
+    (r.cook_method|| []).forEach(v => sets['f-method'].add(v));
+    (r.tags       || []).forEach(v => sets['f-tag'].add(v));
+    (r.custom_tags|| []).forEach(v => sets['f-tag'].add(v));
+  });
+  for (const [id, set] of Object.entries(sets)) {
+    const sel = document.getElementById(id);
+    [...set].sort().forEach(v => {
+      const o = document.createElement('option');
+      o.value = o.textContent = v;
+      sel.appendChild(o);
+    });
+    // keep first option (the label placeholder) selected by default
+    sel.selectedIndex = 0;
+  }
+}
+
+/* ── Filters ── */
+function getFilters() {
+  return {
+    name:    document.getElementById('f-name').value.toLowerCase(),
+    style:   document.getElementById('f-style').value,
+    protein: document.getElementById('f-protein').value,
+    method:  document.getElementById('f-method').value,
+    tag:     document.getElementById('f-tag').value,
+  };
+}
+
+function applyFilters(recipes, f) {
+  return recipes.filter(r => {
+    if (f.name    && !r.name.toLowerCase().includes(f.name))          return false;
+    if (f.style   && r.style !== f.style)                             return false;
+    if (f.protein && !(r.protein     || []).includes(f.protein))      return false;
+    if (f.method  && !(r.cook_method || []).includes(f.method))       return false;
+    if (f.tag) {
+      const all = [...(r.tags || []), ...(r.custom_tags || [])];
+      if (!all.includes(f.tag)) return false;
+    }
+    return true;
+  });
+}
+
+function applySort(recipes) {
+  return [...recipes].sort((a, b) => {
+    let va, vb;
+    if (sortCol === 'score') {
+      va = score(a) ?? -1;
+      vb = score(b) ?? -1;
+    } else if (sortCol === 'protein') {
+      va = (a.protein || []).join();
+      vb = (b.protein || []).join();
+    } else if (sortCol === 'cook_method') {
+      va = (a.cook_method || []).join();
+      vb = (b.cook_method || []).join();
+    } else {
+      va = a[sortCol] ?? '';
+      vb = b[sortCol] ?? '';
+    }
+    if (va < vb) return -sortDir;
+    if (va > vb) return  sortDir;
+    return 0;
+  });
+}
+
+/* ── Render helpers ── */
+function styleBadge(s) {
+  if (!s) return '';
+  const cls = s === 'CE' ? 'b-ce' : s === 'C' ? 'b-c' : 'b-sk';
+  return `<span class="badge ${cls}">${s}</span>`;
+}
+
+function proteinBadges(arr) {
+  if (!arr || !arr.length) return `<span class="never">meatless</span>`;
+  return arr.map(p => `<span class="badge b-p">${p}</span>`).join(' ');
+}
+
+function methodBadges(arr) {
+  return (arr || []).map(m =>
+    `<span class="badge b-m">${m.replace(/_/g,' ')}</span>`
+  ).join(' ');
+}
+
+function starsHtml(id, person, val) {
+  const v = val || 0;
+  let h = `<div class="stars" data-id="${id}" data-person="${person}">`;
+  for (let i = 1; i <= 5; i++) {
+    h += `<span class="star${i <= v ? ' on' : ''}" data-val="${i}">★</span>`;
+  }
+  return h + '</div>';
+}
+
+function scoreHtml(s) {
+  if (s == null) return `<span class="score sc-na">—</span>`;
+  const cls = s >= 4 ? 'sc-hi' : s >= 3 ? 'sc-md' : 'sc-lo';
+  return `<span class="score ${cls}">${s.toFixed(1)}</span>`;
+}
+
+function dateFmt(d) {
+  if (!d) return `<span class="never">never</span>`;
+  const [y, m, dy] = d.split('-');
+  return `${+m}/${+dy}/${y.slice(2)}`;
+}
+
+/* ── Main render ── */
+function render() {
+  const f = applyFilters(allRecipes, getFilters());
+  const rows = applySort(f);
+
+  document.getElementById('pill').textContent =
+    `${rows.length} of ${allRecipes.length} recipes`;
+
+  // Update sort indicators
+  document.querySelectorAll('thead th[data-col]').forEach(th => {
+    const i = th.querySelector('.si');
+    if (!i) return;
+    if (th.dataset.col === sortCol) {
+      th.classList.add('sorted');
+      i.textContent = sortDir === 1 ? '↑' : '↓';
+    } else {
+      th.classList.remove('sorted');
+      i.textContent = '↕';
+    }
+  });
+
+  const msg = document.getElementById('msg');
+  const tbl = document.getElementById('tbl');
+
+  if (!rows.length) {
+    msg.innerHTML = '<div class="icon">🍽️</div>No recipes match your filters.';
+    msg.style.display = 'block';
+    tbl.style.display = 'none';
+    return;
+  }
+
+  msg.style.display = 'none';
+  tbl.style.display = 'table';
+
+  document.getElementById('tbody').innerHTML = rows.map(r => `
+    <tr data-id="${r.id}">
+      <td style="font-weight:500;min-width:140px;max-width:200px">${r.name}</td>
+      <td style="white-space:nowrap">${styleBadge(r.style)}</td>
+      <td style="min-width:70px">${proteinBadges(r.protein)}</td>
+      <td style="min-width:80px">${methodBadges(r.cook_method)}</td>
+      <td class="center">${starsHtml(r.id, 'kim',  r.rating_kim)}</td>
+      <td class="center">${starsHtml(r.id, 'todd', r.rating_todd)}</td>
+      <td class="center">${starsHtml(r.id, 'owen', r.rating_owen)}</td>
+      <td class="lm-cell center" data-id="${r.id}" data-val="${r.last_made || ''}"><span class="lm-val">${dateFmt(r.last_made)}</span></td>
+      <td class="center" style="color:var(--muted)">${r.times_made || 0}</td>
+    </tr>`).join('');
+}
+
+/* ── Star interactions ── */
+const tbody = document.getElementById('tbody');
+
+// Click: save rating (click same star again = clear)
+tbody.addEventListener('click', async e => {
+  const star = e.target.closest('.star');
+  if (!star) return;
+  const div   = star.closest('.stars');
+  const id     = div.dataset.id;
+  const person = div.dataset.person;
+  const newVal = +star.dataset.val;
+
+  const recipe  = allRecipes.find(r => r.id === id);
+  if (!recipe) return;
+  const key     = `rating_${person}`;
+  const current = recipe[key];
+  const saveVal = current === newVal ? null : newVal;   // toggle off if same
+
+  // Optimistic update
+  recipe[key] = saveVal;
+  render();
+
+  // Mark saving
+  const liveDiv = tbody.querySelector(`.stars[data-id="${id}"][data-person="${person}"]`);
+  if (liveDiv) liveDiv.classList.add('saving');
+
+  try {
+    const res = await fetch(`/api/recipes/${id}/ratings`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [key]: saveVal }),
+    });
+    if (!res.ok) throw new Error();
+  } catch {
+    recipe[key] = current; // revert
+    render();
+  }
+});
+
+/* ── Sort ── */
+document.querySelector('#tbl thead').addEventListener('click', e => {
+  const th = e.target.closest('th[data-col]');
+  if (!th) return;
+  const col = th.dataset.col;
+  sortDir = sortCol === col ? -sortDir : 1;
+  sortCol = col;
+  render();
+});
+
+/* ── Filter controls ── */
+document.getElementById('f-name').addEventListener('input', render);
+['f-style','f-protein','f-method','f-tag'].forEach(id =>
+  document.getElementById(id).addEventListener('change', render)
+);
+document.getElementById('btn-clear').addEventListener('click', () => {
+  document.getElementById('f-name').value = '';
+  ['f-style','f-protein','f-method','f-tag'].forEach(id =>
+    document.getElementById(id).value = ''
+  );
+  render();
+});
+
+/* ── Editable Last Made ── */
+tbody.addEventListener('click', e => {
+  const cell = e.target.closest('.lm-cell');
+  if (!cell || cell.querySelector('input')) return; // ignore star clicks or already editing
+
+  const id  = cell.dataset.id;
+  const cur = cell.dataset.val; // ISO date or ''
+
+  cell.innerHTML = `<input type="date" value="${cur}">`;
+  const input = cell.querySelector('input');
+  input.focus();
+
+  let handled = false;
+
+  input.addEventListener('change', async () => {
+    handled = true;
+    const newDate = input.value || null;
+    cell.dataset.val = newDate || '';
+    cell.innerHTML = `<span class="lm-val">${dateFmt(newDate)}</span>`;
+    const recipe = allRecipes.find(r => r.id === id);
+    if (recipe) recipe.last_made = newDate;
+    await fetch(`/api/recipes/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ last_made: newDate }),
+    });
+  });
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      handled = true;
+      cell.innerHTML = `<span class="lm-val">${dateFmt(cur)}</span>`;
+    }
+  });
+
+  input.addEventListener('blur', () => {
+    if (!handled) cell.innerHTML = `<span class="lm-val">${dateFmt(cur)}</span>`;
+  });
+});
+
+document.getElementById('btn-refresh').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-refresh');
+  btn.classList.add('spinning');
+  await load();
+  setTimeout(() => btn.classList.remove('spinning'), 500);
+});
+
+// Auto-refresh when tab regains focus (picks up CLI / agent changes)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') load();
+});
+
+load();
+</script>
+</body>
+</html>
